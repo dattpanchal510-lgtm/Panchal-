@@ -1,0 +1,226 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: members
+    // Document ID: {uid}
+    // Fields:
+    //   - uid: string (required) - Firebase Auth UID
+    //   - name: string (required, 2-50 chars)
+    //   - profession: string (optional, < 100 chars)
+    //   - city: string (optional, < 50 chars)
+    //   - email: string (optional, email format)
+    //   - phone: string (optional, < 20 chars)
+    //   - photoUrl: string (optional, url format)
+    //   - bio: string (optional, < 500 chars)
+    //   - familyBackground: string (optional, < 2000 chars)
+    //   - role: string (required, enum: ['member', 'admin'])
+    //   - createdAt: timestamp (required)
+    //
+    // Collection: matrimonial
+    // Document ID: auto-generated
+    // Fields:
+    //   - uid: string (required)
+    //   - name: string (required)
+    //   - age: number (required)
+    //   - gender: string (required, enum: ['male', 'female'])
+    //   - education: string (optional)
+    //   - occupation: string (optional)
+    //   - height: string (optional)
+    //   - familyDetails: string (optional)
+    //   - expectations: string (optional)
+    //   - photoUrl: string (optional)
+    //   - status: string (required, enum: ['active', 'hidden'])
+    //   - createdAt: timestamp (required)
+    //
+    // Collection: service_requests
+    // Document ID: auto-generated
+    // Fields:
+    //   - uid: string (required)
+    //   - requesterName: string (required)
+    //   - serviceType: string (required, enum: ['widow_support', 'education_aid', 'medical_aid', 'other'])
+    //   - description: string (required)
+    //   - status: string (required, enum: ['pending', 'reviewed', 'completed'])
+    //   - createdAt: timestamp (required)
+    //
+    // Collection: donations
+    // Document ID: auto-generated
+    // Fields:
+    //   - uid: string (optional)
+    //   - donorName: string (required)
+    //   - amount: number (required)
+    //   - purpose: string (optional)
+    //   - date: timestamp (required)
+    //
+    // Collection: inquiries
+    // Document ID: auto-generated
+    // Fields:
+    //   - name: string (required)
+    //   - email: string (required)
+    //   - subject: string (optional)
+    //   - message: string (required)
+    //   - status: string (required, enum: ['new', 'replied'])
+    //   - createdAt: timestamp (required)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/members/$(request.auth.uid)).data.role == 'admin' ||
+          (request.auth.token.email == "dattpanchal510@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function isValidUrl(url) {
+      return url is string && (url.matches("^https://.*") || url.matches("^http://.*"));
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidMember(data) {
+      return data.keys().hasAll(['uid', 'name', 'role', 'createdAt']) &&
+             data.keys().hasOnly(['uid', 'name', 'profession', 'city', 'email', 'phone', 'photoUrl', 'bio', 'familyBackground', 'role', 'createdAt']) &&
+             data.uid == request.auth.uid &&
+             data.name is string && data.name.size() >= 2 && data.name.size() <= 50 &&
+             (!('profession' in data) || (data.profession is string && data.profession.size() <= 100)) &&
+             (!('city' in data) || (data.city is string && data.city.size() <= 50)) &&
+             (!('email' in data) || isValidEmail(data.email)) &&
+             (!('phone' in data) || (data.phone is string && data.phone.size() <= 20)) &&
+             (!('photoUrl' in data) || isValidUrl(data.photoUrl)) &&
+             (!('bio' in data) || (data.bio is string && data.bio.size() <= 500)) &&
+             (!('familyBackground' in data) || (data.familyBackground is string && data.familyBackground.size() <= 2000)) &&
+             data.role in ['member', 'admin'] &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidMatrimonial(data) {
+      return data.keys().hasAll(['uid', 'name', 'age', 'gender', 'status', 'createdAt']) &&
+             data.keys().hasOnly(['uid', 'name', 'age', 'gender', 'education', 'occupation', 'height', 'familyDetails', 'expectations', 'photoUrl', 'status', 'createdAt']) &&
+             data.uid == request.auth.uid &&
+             data.name is string && data.age is number &&
+             data.gender in ['male', 'female'] &&
+             data.status in ['active', 'hidden'] &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidServiceRequest(data) {
+      return data.keys().hasAll(['uid', 'requesterName', 'serviceType', 'description', 'status', 'createdAt']) &&
+             data.uid == request.auth.uid &&
+             data.serviceType in ['widow_support', 'education_aid', 'medical_aid', 'other'] &&
+             data.status in ['pending', 'reviewed', 'completed'] &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidDonation(data) {
+      return data.keys().hasAll(['donorName', 'amount', 'date']) &&
+             data.donorName is string && data.amount is number &&
+             data.date is timestamp;
+    }
+
+    function isValidInquiry(data) {
+      return data.keys().hasAll(['name', 'email', 'message', 'status', 'createdAt']) &&
+             isValidEmail(data.email) &&
+             data.status in ['new', 'replied'] &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidEvent(data) {
+      return data.keys().hasAll(['title', 'description', 'date', 'location', 'category', 'createdAt']) &&
+             data.keys().hasOnly(['title', 'description', 'date', 'location', 'imageUrl', 'category', 'createdAt']) &&
+             data.title is string && data.title.size() >= 5 && data.title.size() <= 100 &&
+             data.description is string && data.description.size() <= 2000 &&
+             data.date is timestamp &&
+             data.location is string && data.location.size() <= 200 &&
+             (!('imageUrl' in data) || isValidUrl(data.imageUrl)) &&
+             data.category in ['upcoming', 'past'] &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidNews(data) {
+      return data.keys().hasAll(['title', 'content', 'date', 'author', 'createdAt']) &&
+             data.keys().hasOnly(['title', 'content', 'date', 'author', 'imageUrl', 'createdAt']) &&
+             data.title is string && data.title.size() >= 5 && data.title.size() <= 100 &&
+             data.content is string && data.content.size() <= 5000 &&
+             data.date is timestamp &&
+             data.author is string && data.author.size() <= 50 &&
+             (!('imageUrl' in data) || isValidUrl(data.imageUrl)) &&
+             data.createdAt is timestamp;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /members/{userId} {
+      // Directory is readable by all authenticated members
+      allow read: if isAuthenticated();
+      
+      // Users can only create/update their own profile
+      // Role can only be set to 'admin' by existing admins
+      allow create: if isOwner(userId) && isValidMember(request.resource.data) && 
+                    (request.resource.data.role == 'member' || isAdmin());
+      
+      allow update: if isOwner(userId) && isValidMember(request.resource.data) && 
+                    (request.resource.data.role == resource.data.role || isAdmin());
+    }
+
+    match /events/{eventId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin() && isValidEvent(request.resource.data);
+    }
+
+    match /news/{newsId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin() && isValidNews(request.resource.data);
+    }
+
+    match /matrimonial/{profileId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidMatrimonial(request.resource.data);
+      allow update: if isOwner(resource.data.uid) && isValidMatrimonial(request.resource.data);
+      allow delete: if isOwner(resource.data.uid) || isAdmin();
+    }
+
+    match /service_requests/{requestId} {
+      allow read: if isOwner(resource.data.uid) || isAdmin();
+      allow create: if isAuthenticated() && isValidServiceRequest(request.resource.data);
+      allow update: if isAdmin() && isValidServiceRequest(request.resource.data);
+    }
+
+    match /donations/{donationId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidDonation(request.resource.data);
+      allow update, delete: if isAdmin();
+    }
+
+    match /inquiries/{inquiryId} {
+      allow create: if true; // Public can inquire
+      allow read, update, delete: if isAdmin();
+    }
+
+    // Default deny
+    match /{path=**} {
+      allow read, write: if false;
+    }
+  }
+}

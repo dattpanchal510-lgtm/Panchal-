@@ -1,0 +1,143 @@
+{
+  "entities": {
+    "Member": {
+      "title": "Member",
+      "description": "A community member profile",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Firebase Auth UID" },
+        "name": { "type": "string" },
+        "profession": { "type": "string" },
+        "city": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "phone": { "type": "string" },
+        "photoUrl": { "type": "string", "format": "uri" },
+        "bio": { "type": "string" },
+        "familyBackground": { "type": "string", "description": "Details about family lineage and background" },
+        "role": { "type": "string", "enum": ["member", "admin"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "name", "role"]
+    },
+    "MatrimonialProfile": {
+      "title": "MatrimonialProfile",
+      "description": "A profile for matrimonial services",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "name": { "type": "string" },
+        "age": { "type": "number" },
+        "gender": { "type": "string", "enum": ["male", "female"] },
+        "education": { "type": "string" },
+        "occupation": { "type": "string" },
+        "height": { "type": "string" },
+        "familyDetails": { "type": "string" },
+        "expectations": { "type": "string" },
+        "photoUrl": { "type": "string", "format": "uri" },
+        "status": { "type": "string", "enum": ["active", "hidden"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "name", "age", "gender"]
+    },
+    "ServiceRequest": {
+      "title": "ServiceRequest",
+      "description": "A request for community service or aid",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "requesterName": { "type": "string" },
+        "serviceType": { "type": "string", "enum": ["widow_support", "education_aid", "medical_aid", "other"] },
+        "description": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "reviewed", "completed"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "requesterName", "serviceType", "description"]
+    },
+    "Donation": {
+      "title": "Donation",
+      "description": "A record of community service fund donation",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "donorName": { "type": "string" },
+        "amount": { "type": "number" },
+        "purpose": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" }
+      },
+      "required": ["donorName", "amount"]
+    },
+    "Inquiry": {
+      "title": "Inquiry",
+      "description": "A general community inquiry",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "subject": { "type": "string" },
+        "message": { "type": "string" },
+        "status": { "type": "string", "enum": ["new", "replied"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "email", "message"]
+    },
+    "Event": {
+      "title": "Event",
+      "description": "A community event",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "location": { "type": "string" },
+        "imageUrl": { "type": "string", "format": "uri" },
+        "category": { "type": "string", "enum": ["upcoming", "past"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "date", "category"]
+    },
+    "NewsItem": {
+      "title": "NewsItem",
+      "description": "A news announcement",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "author": { "type": "string" },
+        "imageUrl": { "type": "string", "format": "uri" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "content", "date", "author"]
+    }
+  },
+  "firestore": {
+    "/members/{memberId}": {
+      "schema": "Member",
+      "description": "Collection of community members"
+    },
+    "/events/{eventId}": {
+      "schema": "Event",
+      "description": "Collection of community events"
+    },
+    "/news/{newsId}": {
+      "schema": "NewsItem",
+      "description": "Collection of news items"
+    },
+    "/matrimonial/{profileId}": {
+      "schema": "MatrimonialProfile",
+      "description": "Collection of matrimonial profiles"
+    },
+    "/service_requests/{requestId}": {
+      "schema": "ServiceRequest",
+      "description": "Collection of service requests"
+    },
+    "/donations/{donationId}": {
+      "schema": "Donation",
+      "description": "Collection of donations"
+    },
+    "/inquiries/{inquiryId}": {
+      "schema": "Inquiry",
+      "description": "Collection of inquiries"
+    }
+  }
+}
